@@ -1,0 +1,11 @@
+version: "3.7"
+services:
+  lesh_infobot:
+    build:
+      context: .
+    command: bash -c "python bot.py"
+    volumes:
+      - "./:/usr/local/src/:ro"
+    env_file:
+      - "local.env"
+    network_mode: host

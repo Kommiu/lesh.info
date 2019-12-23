@@ -8,24 +8,14 @@ from telegram import ParseMode
 from telegram.utils.helpers import mention_html
 import sys
 import traceback
+import click
 from telegram import ChatAction
 from telegram.ext import Updater, MessageHandler, Filters
 
 import dialogflow_v2 as df
-
-config = ConfigParser()
-config.read('config.ini')
-tg_token = config['DEFAULTS']['tg_token']
-df_project_id = config['DEFAULTS']['df_project_id']
-language_code = config['DEFAULTS']['language_code']
-session_client = df.SessionsClient()
+from processors import processor_map, process_default 
 
 
-updater = Updater(
-    token=tg_token,
-    use_context=True,
-)
-dispatcher = updater.dispatcher
 
 
 def send_typing_action(func):
@@ -40,7 +30,7 @@ def send_typing_action(func):
 
 
 @send_typing_action
-def respond(update, context):
+def _respond(update, context, session_client=None, project_id=None):
     if not update.message or not update.message.text:
         return
 
@@ -48,7 +38,7 @@ def respond(update, context):
     if df_session_id is None:
         df_session_id = update.effective_user.id
 
-    df_session = session_client.session_path(df_project_id, df_session_id)
+    df_session = session_client.session_path(project_id, df_session_id)
     text_input = df.types.TextInput(
         text=update.message.text,
         language_code=language_code,
@@ -59,20 +49,16 @@ def respond(update, context):
         query_input=query_input,
     )
 
-    response_lines = response.query_result.fulfillment_text.split('\n')
-    for line in response_lines:
-        context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=line,
+    processor = processor_map.get(
+        response.query_result.intent.display_name,
+        process_default
     )
+    processor(response)
 
-
-respond_handler = MessageHandler(Filters.text, respond)
-dispatcher.add_handler(respond_handler)
 
 
 def error_handler(update, context):
-    devs = [config['DEFAULTS'].getint('admin')]
+    devs = [int(x) for x in config['DEFAULTS'].get('admin').split(' ')]
     if update.effective_message:
         text = "Hey. I'm sorry to inform you that an error happened while I tried to handle your update. " \
                "My developer(s) will be notified."
@@ -94,8 +80,24 @@ def error_handler(update, context):
         context.bot.send_message(dev_id, text, parse_mode=ParseMode.HTML)
     raise
 
+@click.command()
+@click.option('--tg_token', envvar='TG_TOKEN')
+@click.option('--project_id', envvar='PROJECT_ID')
+@click.option('--language_code', default='ru')
+def run(tg_token, project_id, language_code):
+    session_client = df.SessionsClient()
 
-dispatcher.add_error_handler(error_handler)
+    updater = Updater(
+        token=tg_token,
+        use_context=True,
+    )
+    dispatcher = updater.dispatcher
+    respond = partial(_respond, project_id=project_id, session_client=session_client)
+    respond_handler = MessageHandler(Filters.text, respond)
+    dispatcher.add_handler(respond_handler)
 
+    dispatcher.add_error_handler(error_handler)
+    updater.start_polling()
 
-updater.start_polling()
+if __name__ == '__main__':
+    run()

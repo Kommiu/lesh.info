@@ -1,3 +1,6 @@
+click
+pandas
+dialogflow
 python-telegram-bot
 requests
 pysocks
