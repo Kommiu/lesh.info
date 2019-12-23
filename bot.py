@@ -1,4 +1,3 @@
-import logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                      level=logging.DEBUG)
 
@@ -58,8 +57,7 @@ def _respond(update, context, session_client=None, project_id=None):
 
 
 
-def error_handler(update, context):
-    devs = [int(x) for x in config['DEFAULTS'].get('admin').split(' ')]
+def error_handler(update, context, devs):
     if update.effective_message:
         text = "Hey. I'm sorry to inform you that an error happened while I tried to handle your update. " \
                "My developer(s) will be notified."
@@ -85,6 +83,7 @@ def error_handler(update, context):
 @click.option('--tg_token', envvar='TG_TOKEN')
 @click.option('--project_id', envvar='PROJECT_ID')
 @click.option('--language_code', default='ru')
+@click.option('admins', envvar='ADMINS')
 def run(tg_token, project_id, language_code):
     session_client = df.SessionsClient()
 
@@ -96,8 +95,9 @@ def run(tg_token, project_id, language_code):
     respond = partial(_respond, project_id=project_id, session_client=session_client)
     respond_handler = MessageHandler(Filters.text, respond)
     dispatcher.add_handler(respond_handler)
-
-    dispatcher.add_error_handler(error_handler)
+    
+    admins = [int(x) for x in admins.split(' ')]
+    dispatcher.add_error_handler(partial(error_handler, devs=admins))
     updater.start_polling()
 
 if __name__ == '__main__':
