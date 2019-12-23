@@ -59,7 +59,7 @@ def respond(update, context):
         query_input=query_input,
     )
 
-    response_lines = response.query_result.fullfilment_text.split('\n')
+    response_lines = response.query_result.fulfillment_text.split('\n')
     for line in response_lines:
         context.bot.send_message(
             chat_id=update.effective_chat.id,
@@ -72,7 +72,7 @@ dispatcher.add_handler(respond_handler)
 
 
 def error_handler(update, context):
-    devs = BotConfig.admin_ids
+    devs = [config['DEFAULTS'].getint('admin')]
     if update.effective_message:
         text = "Hey. I'm sorry to inform you that an error happened while I tried to handle your update. " \
                "My developer(s) will be notified."
