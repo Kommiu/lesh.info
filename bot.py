@@ -2,6 +2,7 @@ import logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                      level=logging.DEBUG)
 
+from functools import partial
 from configparser import ConfigParser
 from functools import wraps
 from telegram import ParseMode
