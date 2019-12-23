@@ -1,5 +1,8 @@
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                     level=logging.DEBUG)
+import logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.DEBUG
+)
 
 from functools import partial
 from configparser import ConfigParser
@@ -30,7 +33,13 @@ def send_typing_action(func):
 
 
 @send_typing_action
-def _respond(update, context, session_client=None, project_id=None):
+def _respond(
+        update,
+        context,
+        session_client=None,
+        project_id=None,
+        language_code=None,
+):
     if not update.message or not update.message.text:
         return
 
@@ -53,7 +62,7 @@ def _respond(update, context, session_client=None, project_id=None):
         response.query_result.intent.display_name,
         process_default
     )
-    processor(response)
+    processor(response, update, context)
 
 
 
@@ -80,11 +89,11 @@ def error_handler(update, context, devs):
     raise
 
 @click.command()
-@click.option('--tg_token', envvar='TG_TOKEN')
-@click.option('--project_id', envvar='PROJECT_ID')
+@click.argument('tg_token', envvar='TG_TOKEN')
+@click.argument('project_id', envvar='PROJECT_ID')
+@click.argument('admins', envvar='ADMINS')
 @click.option('--language_code', default='ru')
-@click.option('admins', envvar='ADMINS')
-def run(tg_token, project_id, language_code):
+def run(tg_token, project_id, admins, language_code):
     session_client = df.SessionsClient()
 
     updater = Updater(
@@ -92,7 +101,7 @@ def run(tg_token, project_id, language_code):
         use_context=True,
     )
     dispatcher = updater.dispatcher
-    respond = partial(_respond, project_id=project_id, session_client=session_client)
+    respond = partial(_respond, project_id=project_id, session_client=session_client, language_code=language_code)
     respond_handler = MessageHandler(Filters.text, respond)
     dispatcher.add_handler(respond_handler)
     
