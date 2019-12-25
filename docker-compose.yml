@@ -3,7 +3,8 @@ services:
   lesh_infobot:
     build:
       context: .
-    command: bash -c "python bot.py"
+    command: /bin/bash -c " python fill_db.py $TABLES_PATH $DB_PATH 
+      && python bot.py"
     volumes:
       - "./:/usr/local/src/:ro"
     env_file:
