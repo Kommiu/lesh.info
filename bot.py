@@ -16,7 +16,6 @@ from telegram import ChatAction
 from telegram.ext import Updater, MessageHandler, Filters
 
 import dialogflow_v2 as df
-from processors import processor_map, process_default 
 
 def send_typing_action(func):
     """Sends typing action while processing func command."""
