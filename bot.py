@@ -65,7 +65,7 @@ class Bot():
                 chat_id=update.effective_chat.id,
                 text=line,
             )
-    def _process_discount(self, respose, update, context, session):
+    def _process_discount(self, response, update, context, session):
         fio = response.query_result.parameters['fio']
         year = response.query_result.parameters['birth_year']
 
@@ -146,8 +146,6 @@ class Bot():
             context.bot.send_message(dev_id, text, parse_mode=ParseMode.HTML)
         raise
     
-
-
 
     def detect_intent(self, text, session):
         text_input = df.types.TextInput(text=text, language_code=self.language_code)
