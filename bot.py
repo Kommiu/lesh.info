@@ -66,7 +66,7 @@ class Bot():
                 text=line,
             )
     def _process_discount(self, response, update, context, session):
-        fio = response.query_result.parameters['fio']
+        fio = response.query_result.parameters['name']
         year = response.query_result.parameters['birth_year']
 
         with sqlite3.connect(self.db_path) as conn:
@@ -76,7 +76,7 @@ class Bot():
                 SELECT COUNT(*)
                 FROM fees
                 WHERE ФИО=:fio
-                AND 'год рождения'=:year
+                AND "год рождения"=:year
                 ''',
                 {'fio': fio, 'year': year}
             )
@@ -100,7 +100,7 @@ class Bot():
                 ''',
                 (name, )
             )
-            count = c.fetchall()
+            count = c.fetchall()[0][0]
         if count == 0:
             new_response = self.detect_intent('Нет', session)
         else:
