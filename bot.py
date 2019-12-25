@@ -3,7 +3,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.DEBUG
 )
-
+import sqlite3 
 from functools import partial
 from configparser import ConfigParser
 from functools import wraps
@@ -20,7 +20,7 @@ import dialogflow_v2 as df
 def send_typing_action(func):
     """Sends typing action while processing func command."""
     @wraps(func)
-    def command_func(update, context, *args, **kwargs):
+    def command_func(self, update, context, *args, **kwargs):
         context.bot.send_chat_action(chat_id=update.effective_message.chat_id, action=ChatAction.TYPING)
         return func(update, context,  *args, **kwargs)
 
@@ -41,6 +41,7 @@ class Bot():
         self.db_path = db_path
         self.processor_map = {
             'who_comes': self._process_whocomes,
+            'check_discount': self._process_discount,
         }
 
     def run(self):
@@ -64,7 +65,48 @@ class Bot():
                 chat_id=update.effective_chat.id,
                 text=line,
             )
+    def _process_discount(self, respose, update, context, session):
+        fio = response.query_result.parameters['fio']
+        year = response.query_result.parameters['birth_year']
 
+        with sqlite3.connect(self.db_path) as conn:
+            c = conn.cursor()
+            c.execute(
+                '''
+                SELECT COUNT(*)
+                FROM fees
+                WHERE ФИО=:fio
+                AND 'год рождения'=:year
+                ''',
+                {'fio': fio, 'year': year}
+            )
+            count = c.fetchall()[0][0]
+        if count == 0:
+            new_response = self.detect_intent('Нет', session)
+        else:
+            new_response = self.detect_intent('Да', session)
+
+        self.process(new_response, update, context, session)
+
+    def _process_whocomes(self, response, update, context, session):
+        name = response.query_result.parameters['teacher_name']
+        with sqlite3.connect(self.db_path) as conn:
+            c = conn.cursor()
+            c.execute(
+                '''
+                SELECT COUNT(*)
+                FROM teachers
+                WHERE Фамилия=?
+                ''',
+                (name, )
+            )
+            count = c.fetchall()
+        if count == 0:
+            new_response = self.detect_intent('Нет', session)
+        else:
+            new_response = self.detect_intent('Да', session)
+
+        self.process(new_response, update, context, session)
     @send_typing_action
     def _respond(
             self,
@@ -105,31 +147,12 @@ class Bot():
         raise
     
 
-    def _process_whocomes(self, response, update, context, session):
-        name = response.query_result.parameters['teacher_name']
-        with sqlite3.connect(self.db_path) as conn:
-            c = conn.cursor()
-            c.execute(
-                '''
-                SELECT Фамилия, Имя 
-                FROM teachers
-                WHERE Фамилия=?
-                ''',
-                (name, )
-            )
-            rows = c.fetchall()
-        if rows is None:
-            new_response = self.detect_intent('No', session)
-        else:
-            new_response = self.detect_intent('Yes', session)
-
-        self.process(new_response, update, context, session)
 
 
     def detect_intent(self, text, session):
         text_input = df.types.TextInput(text=text, language_code=self.language_code)
         query_input = df.types.QueryInput(text=text_input)
-        response = self.session_client.detect_intent(session=session, query_inpute=query_input)
+        response = self.session_client.detect_intent(session=session, query_input=query_input)
         return response
 
 
