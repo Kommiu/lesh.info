@@ -38,7 +38,7 @@ class Bot():
             use_context=True,
         )
         self.admins = [int(x) for x in admins.split(' ')]
-        self.dispatcher = updater.dispatcher
+        self.dispatcher = self.updater.dispatcher
         self.db_path = db_path
         self.processor_map = {
             'who_comes': self._process_whocomes,
@@ -49,7 +49,7 @@ class Bot():
         respond_handler = MessageHandler(Filters.text, self._respond)
         self.dispatcher.add_handler(respond_handler)
         self.dispatcher.add_error_handler(self._error_handler)
-        updater.start_polling()
+        self.updater.start_polling()
 
     def process(self, response, update, context, session):
         processor = self.processor_map.get(
@@ -75,19 +75,11 @@ class Bot():
         if not update.message or not update.message.text:
             return
 
-        df_session_id = context.user_data.get('df_session_id', None)
-        if df_session_id is None:
-            df_session_id = update.effective_user.id
-
-        df_session = self.session_client.session_path(self.project_id, df_session_id)
+        session_id = update.effective_user.id
+        session = self.session_client.session_path(self.project_id, session_id)
         text = update.message.text
-        response = self.detect_intent(text, df_session)
-
-        processor = self.processor_map.get(
-            response.query_result.intent.display_name,
-            process_default
-        )
-        processor(response, update, context, db_session)
+        response = self.detect_intent(text, session)
+        self.process(response, update, context, session)
         
 
     def _error_handler(self, update, context):
