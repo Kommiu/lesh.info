@@ -41,7 +41,7 @@ class Bot():
         self.db_path = db_path
         self.processor_map = {
             'who_comes': self._process_whocomes,
-            'check_discount': self._process_discount,
+            'check_discount_data': self._process_discount,
         }
 
     def run(self):
